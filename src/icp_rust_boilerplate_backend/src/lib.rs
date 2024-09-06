@@ -275,6 +275,34 @@ fn change_user_role(payload: ChangeUserRolePayload) -> Result<User, String> {
     Ok(updated_user)
 }
 
+// Additional Utility Functions
+#[ic_cdk::update]
+fn delete_user(user_id: u64) -> Result<String, String> {
+    USER_STORAGE.with(|storage| {
+        if storage.borrow_mut().remove(&user_id).is_some() {
+            Ok("User deleted successfully.".to_string())
+        } else {
+            Err("User not found.".to_string())
+        }
+    })
+}
+
+#[ic_cdk::update]
+fn update_user(user_id: u64, payload: UserPayload) -> Result<User, String> {
+    let mut user = USER_STORAGE.with(|storage| {
+        storage.borrow().iter().find(|(_, user)| user.id == user_id).map(|(_, user)| user.clone())
+    }).ok_or("User not found".to_string())?;
+
+    // Update fields
+    user.username = payload.username;
+    user.password = payload.password;
+    user.email = payload.email;
+    user.role = payload.role;
+
+    USER_STORAGE.with(|storage| storage.borrow_mut().insert(user_id, user.clone()));
+    Ok(user)
+}
+
 // Course Management
 #[derive(candid::CandidType, Deserialize, Serialize)]
 struct CoursePayload {
